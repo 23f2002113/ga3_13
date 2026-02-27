@@ -5,26 +5,26 @@ async function run() {
   const page = await browser.newPage();
   let grandTotal = 0;
 
-  // The seeds provided in the assignment
   const seeds = [84, 85, 86, 87, 88, 89, 90, 91, 92, 93];
 
   for (const seed of seeds) {
-    const url = `https://21f1003117.github.io/scraping-seeds/seed/${seed}.html`;
+    // UPDATED URL: Changed from /seed/${seed} to /seed${seed}
+    const url = `https://21f1003117.github.io/scraping-seeds/seed${seed}.html`;
     
     try {
-      // Navigate and wait until the network is idle
-      await page.goto(url, { waitUntil: 'networkidle' });
+      console.log(`Visiting: ${url}`);
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
       
-      // Wait for at least one table to be visible
-      await page.waitForSelector('table', { timeout: 5000 }).catch(() => null);
-
       // Extract all numbers from all table cells
-      const pageNumbers = await page.$$eval('td', cells => {
+      const pageNumbers = await page.$$eval('table td', (cells) => {
         return cells.map(cell => {
-          // Remove commas, whitespace, and non-numeric characters except decimals
-          const text = cell.innerText.trim().replace(/,/g, '');
-          const val = parseFloat(text);
-          return isNaN(val) ? 0 : val;
+          // Find all numbers (including decimals) in the text
+          const matches = cell.innerText.match(/[-+]?[0-9]*\.?[0-9]+/g);
+          if (matches) {
+            // Sum all numbers found within a single cell
+            return matches.reduce((sum, val) => sum + parseFloat(val), 0);
+          }
+          return 0;
         });
       });
 
