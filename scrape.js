@@ -8,35 +8,32 @@ async function run() {
   const seeds = [84, 85, 86, 87, 88, 89, 90, 91, 92, 93];
 
   for (const seed of seeds) {
-    // UPDATED URL: Changed from /seed/${seed} to /seed${seed}
-    const url = `https://21f1003117.github.io/scraping-seeds/seed${seed}.html`;
+    // NEW URL STRUCTURE
+    const url = `https://sanand0.github.io/tdsdata/js_table/?seed=${seed}`;
     
     try {
       console.log(`Visiting: ${url}`);
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto(url, { waitUntil: 'networkidle' });
       
-      // Extract all numbers from all table cells
-      const pageNumbers = await page.$$eval('table td', (cells) => {
-        return cells.map(cell => {
-          // Find all numbers (including decimals) in the text
-          const matches = cell.innerText.match(/[-+]?[0-9]*\.?[0-9]+/g);
-          if (matches) {
-            // Sum all numbers found within a single cell
-            return matches.reduce((sum, val) => sum + parseFloat(val), 0);
-          }
-          return 0;
-        });
+      // IMPORTANT: Wait for the table cells to actually load in the browser
+      await page.waitForSelector('td', { timeout: 10000 });
+
+      // Extract all numbers from the table
+      const pageSum = await page.$$eval('td', cells => {
+        return cells
+          .map(cell => cell.innerText.trim().replace(/,/g, '')) // Remove commas
+          .filter(text => text !== "" && !isNaN(text))        // Keep only valid numbers
+          .reduce((acc, val) => acc + parseFloat(val), 0);     // Sum them up
       });
 
-      const pageSum = pageNumbers.reduce((acc, val) => acc + val, 0);
       grandTotal += pageSum;
-
       console.log(`Seed ${seed}: Page Sum = ${pageSum}`);
     } catch (error) {
-      console.error(`Error processing Seed ${seed}: ${error.message}`);
+      console.error(`Error on Seed ${seed}: ${error.message}`);
     }
   }
 
+  // The total that must appear in your logs
   console.log(`Final Total Sum: ${grandTotal}`);
   await browser.close();
 }
